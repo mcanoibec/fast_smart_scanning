@@ -247,3 +247,18 @@ fabric.properties
 # Built Visual Studio Code Extensions
 *.vsix
 # --------------------------------------------
+work_directory/training/cameraman/c_16/erd_model_relu.pkl
+work_directory/training/cameraman/c_16/training_database.pkl
+work_directory/training/cameraman/c_2/erd_model_relu.pkl
+work_directory/training/cameraman/c_2/training_database.pkl
+work_directory/training/cameraman/c_32/erd_model_relu.pkl
+work_directory/training/cameraman/c_32/training_database.pkl
+work_directory/training/cameraman/c_4/erd_model_relu.pkl
+work_directory/training/cameraman/c_4/training_database.pkl
+work_directory/training/cameraman/c_64/erd_model_relu.pkl
+work_directory/training/cameraman/c_64/training_database.pkl
+work_directory/training/cameraman/c_8/erd_model_relu.pkl
+work_directory/training/cameraman/c_8/training_database.pkl
+work_directory/training/cameraman/c_2/erd_model_relu.pkl
+work_directory/training/cameraman/c_2/erd_model_relu.pkl
+work_directory/training/cameraman/c_2/erd_model_relu.pkl

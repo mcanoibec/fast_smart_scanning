@@ -178,7 +178,7 @@ class SimulatedSample(Sample):
             s1 = start_offsets[ix]
             s2 = stop_offsets[ix]
             if (sig_this, win_this) not in gaussian_windows:
-                gaussian_signal = scipy.signal.gaussian(window_sizes[ix], sig_this)
+                gaussian_signal = scipy.signal.windows.gaussian(window_sizes[ix], sig_this)
                 gaussian_window = np.outer(gaussian_signal, gaussian_signal)
                 gaussian_windows[(sig_this, win_this)] = gaussian_window
 

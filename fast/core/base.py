@@ -206,6 +206,49 @@ class Sample:
         self.ERD[unmeasured_idxs[:, 0], unmeasured_idxs[:, 1]] = erds
         self.ERD = self._rescale_and_fix_erd(self.ERD, self.mask)
         self.iteration += 1
+    
+    def reconstruct_and_compute_erddd(self, mmm):
+        # Compute feature information for SLADS models; not needed for DLADS
+        unmeasured_idxs = self._get_limited_update_locations(self.mask.copy(), deepcopy(self.measurement_info))
+
+        measurement_info = deepcopy(self.measurement_info)
+        measurement_info.unmeasured_idxs = unmeasured_idxs
+
+        # Determine neighbor information for all unmeasured locations
+        if len(self.measurement_info.unmeasured_idxs) > 0:
+            self.neighbors = find_neighbors(measurement_info, self.params_gen.num_neighbors)
+        else:
+            self.neighbors = NeighborsInfo([], [], [], [])
+
+        # Compute reconstructions, resize to physical dimensions
+        self.recon_image = compute_recon(self.recon_image, measurement_info, self.neighbors)
+        mmm=1
+
+        if self.params_erd.model_type == "slads-net":
+            self.poly_features = compute_poly_features(
+                self.params_sample,
+                self.recon_image,
+                unmeasured_idxs,
+                self.neighbors,
+                self.params_erd.feat_distance_cutoff,
+                self.params_erd.feature_type,
+            )
+
+        # Compute RD/ERD; if every location has been scanned all positions are zero
+        # Determine the Estimated Reduction in Distortion
+
+        if len(measurement_info.unmeasured_idxs) == 0:
+            self.RD = np.zeros(self.params_sample.image_shape)
+            self.ERD = np.zeros(self.params_sample.image_shape)
+            return
+
+        # Compute the ERD with the prescribed model
+        if self.params_erd.model_type == "slads-net":
+            erds = self.erd_model.predict(self.poly_features)
+
+        self.ERD[unmeasured_idxs[:, 0], unmeasured_idxs[:, 1]] = erds
+        self.ERD = self._rescale_and_fix_erd(self.ERD, self.mask)
+        self.iteration += 1
 
     def _reconstruct_and_compute_erd_from_recon(self, mask, measurement_info, recon_image, erd):
         # Compute feature information for SLADS models; not needed for DLADS
