@@ -101,6 +101,7 @@ def matrix_cut(matrix, end_dimension):
     #Cuts a square 
     if len(matrix)<end_dimension:
         print('Error: Exit matrix size is larger than the original dimensions')
+        return matrix
     else:
         side=int(len(matrix)/2)
         dim_2=int(end_dimension/2)
