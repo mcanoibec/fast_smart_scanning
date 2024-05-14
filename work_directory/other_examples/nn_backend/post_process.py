@@ -52,12 +52,12 @@ def prediction_reconstruction_with_train(res, ref, cell_index, train_index, test
     return full_vec
 
 
-def img_export(filename, folder, matrix, vector, topography_file, nu_dim):
+def img_export(filename, folder, matrix, vector, topography_file, nu_dim, og_dim):
     Original_file=copy(topography_file)
     Image_to_export=matrix
     ########
     template=np.loadtxt(rf'{Original_file}', skiprows=4)
-    template=np.reshape(template, (128,128,3))
+    template=np.reshape(template, (og_dim,og_dim,3))
     template=matrix_cut(template, nu_dim)
     template=template.reshape((nu_dim)**2,3)
     new_xyz=copy(template)
