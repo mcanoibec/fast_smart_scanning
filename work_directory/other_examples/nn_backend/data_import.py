@@ -3,11 +3,9 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
 from copy import copy
-import sys
 
-sys.path.append("D:\personal_scripts")
-from import_xyz_img import import_xyz_img
-from conv_imgs import conv_imgs
+from nn_backend.import_xyz_img import import_xyz_img
+from nn_backend.conv_imgs import conv_imgs
 from sklearn.metrics import r2_score, mean_absolute_error
 from matplotlib import cm, colormaps
 from matplotlib.colors import ListedColormap
