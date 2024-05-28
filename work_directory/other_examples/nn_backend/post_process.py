@@ -57,5 +57,5 @@ def img_export(filename, folder, matrix, vector, topography_file, nu_dim, og_dim
 
 def histogram_export(input, filename, folder, start=0, stop=8, step=0.1):
     hist, bins= np.histogram(input, np.arange(start,stop,step))
-    hist=np.column_stack((hist, bins[1:]))
+    hist=np.column_stack((bins[1:], hist))
     np.savetxt(rf'{folder}\{filename}_hist.csv', hist, delimiter=',')
