@@ -55,6 +55,32 @@ def img_export(filename, folder, matrix, vector, topography_file, nu_dim, og_dim
 
     np.savetxt(rf'{folder}\{filename}_vec.csv',vector)   
 
+def img_export2(path, matrix, topography_file, nu_dim, og_dim):
+    Original_file=copy(topography_file)
+    Image_to_export=matrix
+    ########
+    template=np.loadtxt(rf'{Original_file}', skiprows=4)
+    template=np.reshape(template, (og_dim,og_dim,3))
+    template=matrix_cut(template, nu_dim)
+    template=template.reshape((nu_dim)**2,3)
+    new_xyz=copy(template)
+    flipped_img=np.flipud(Image_to_export)
+    flipped_img=flipped_img.reshape(len(Image_to_export)**2)
+    new_xyz[:,2]=flipped_img
+    np.savetxt('temp_xyz_data.txt',new_xyz, delimiter='\t')
+
+
+    header='WSxM file copyright UAM\nWSxM ASCII XYZ file\nX[nm]\tY[nm]\tZ[ep]\n'
+    with open('temp_xyz_data.txt') as fp:
+        data = fp.read()
+
+    full_export=copy(header)
+    full_export+='\n'
+    full_export+=data
+
+    with open (rf'{path}', 'w') as fp:
+        fp.write(full_export)
+
 def histogram_export(input, filename, folder, start=0, stop=8, step=0.1):
     hist, bins= np.histogram(input, np.arange(start,stop,step))
     hist=np.column_stack((bins[1:], hist))
