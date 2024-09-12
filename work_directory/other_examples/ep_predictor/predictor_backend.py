@@ -20,6 +20,7 @@ from os.path import isfile, join
 import re
 from tqdm import tqdm
 from nn_backend.extras import simulation_table_import
+from skimage.metrics import structural_similarity as ssim
 
 class fc_input:
     def __init__(self, topography_file, curves_file, ref_file, cutout_size):
@@ -234,9 +235,10 @@ class sim_tables:
         tab_curves_sampled=tab_curves_sampled.iloc[:,fc.sample_heights]
         tab_T=fc.topography[tab_index].reshape(len(tab_index),1)
         X_tab=np.concatenate((tab_T, tab_curves_sampled), axis=1)
+        X_tab=pd.DataFrame(X_tab, columns=self.fc.x.columns)
         self.x_tab=X_tab
-        self.x_tab=y_tab
-
+        self.y_tab=y_tab
+        self.tab_indexes=tab_index
         self.conv=conv
         topo_n_mat=self.conv.topography_norm
         cutout_size=self.conv.cutout_size
@@ -246,7 +248,7 @@ class sim_tables:
         tab_index_2[1]=tab_index_2[1]+int((cutout_size-1)/2)
         Cv_tab_mat=conv_imgs(topo_n_mat[:,:,0], cutout_size, tab_index_2)
         Cv_tab_mat=np.expand_dims(Cv_tab_mat, axis=-1)
-        self.conv_tab=Cv_tab_mat
+        self.x_cutouts_tab=Cv_tab_mat
 
     def normalize(self):
         if hasattr(self, 'x_tab'):
@@ -312,6 +314,8 @@ class preprocessing:
             fc.apply_masks(self.mask_indexes, self.mask_from_topo_indexes)
             fc.normalize()
             self.fc=fc
+            self.x_final=self.fc.x_masked_norm
+            self.y_final=self.fc.y_masked
         else:
             print("Error: Mask not found. Use get_mask() to obtain")
     def get_conv(self, direct_mask=0):
@@ -323,15 +327,23 @@ class preprocessing:
                 conv.make_cutouts()
                 conv.apply_masks(self.mask_indexes, self.mask_from_topo_indexes)
             self.conv=conv
+            self.conv_final=self.conv.x_cutouts_masked
         else:
             print("Error: Mask not found. Use get_mask() to obtain")
     def get_tables(self, sim_tables_folder):
         tabs=sim_tables(self.fc, self.conv, sim_tables_folder)
-        #tabs.normalize() ISUEEEEEES
+        tabs.normalize()
         self.tabs=tabs
+    def add_tables(self):
+        self.x_final=pd.DataFrame(np.concatenate((self.fc.x_masked_norm, self.tabs.x_tab_norm), axis=0), columns=self.fc.x.columns)
+        self.conv_final=np.concatenate((self.conv.x_cutouts_masked, self.tabs.x_cutouts_tab), axis=0)
+        self.y_final=pd.DataFrame(np.concatenate((self.fc.y_masked, self.tabs.y_tab), axis=0))
+
+        train_input_index=np.concatenate((self.mask_indexes,self.tabs.tab_indexes))
+        self.train_input_index=train_input_index
 class ep_prediction:
     def __init__(self, preproc_data, pctg, augment=1):
-        fc, conv, y = preproc_data.fc.x_masked_norm,preproc_data.conv.x_cutouts_masked,preproc_data.fc.y_masked
+        fc, conv, y = preproc_data.x_final,preproc_data.conv_final,preproc_data.y_final
         sss = ShuffleSplit(n_splits=1, test_size=1-(pctg/100), random_state=1)
 
         sss.get_n_splits(fc, y)
@@ -369,10 +381,11 @@ class ep_prediction:
         self.test_index=test_index
         self.mask_indexes=preproc_data.mask_indexes
         self.mask_from_topo_indexes=preproc_data.mask_from_topo_indexes
-        self.y_masked=y
+        self.y_masked=preproc_data.fc.y_masked
         self.y=preproc_data.y
         self.nu_dim=preproc_data.nu_dim
         self.pctg=pctg
+        self.train_input_index=preproc_data.train_input_index
     def train(self, kernel_dim=3, lossf=cube_msle, batch_sz=200, iterations=300, verb=1, summary=0):
         reg, histo=nn_for_ep(self.x_train,
                      self.conv_train,
@@ -394,7 +407,30 @@ class ep_prediction:
         y=self.y
         y_mat=np.array(y).reshape(nu_dim,nu_dim)
         y_cell=self.y_masked
-        #Blank canvas
+        train_input_index=self.train_input_index
+
+        full_vec_roi=np.zeros(nu_dim**2)+1
+        for i in np.arange(len(roi_index)):
+            full_vec_roi[roi_index[i]]=res[i]
+
+
+        for i in y.index[np.array(train_input_index)[train_index]]:
+            if i in cell_index and i in np.array(train_input_index)[train_index] :
+                full_vec_roi[i]=y.iloc[i]
+
+        full_img_roi=np.reshape(full_vec_roi,(nu_dim,nu_dim))
+        full_vec_roi=pd.DataFrame(full_vec_roi)
+        full_roi=copy(full_vec_roi)
+        full_cell=pd.DataFrame(full_roi.iloc[roi_index])
+
+        #Metrics calculations
+        res_cell=np.array(full_vec_roi.iloc[cell_index])
+        full_vec_cell=np.zeros(nu_dim**2)+1
+        for i in np.arange(len(cell_index)):
+            full_vec_cell[cell_index[i]]=res_cell[i]
+        full_img_cell=np.reshape(full_vec_cell,(nu_dim,nu_dim))
+
+        '''#Blank canvas
         full_vec_roi=np.zeros(nu_dim**2)+1
         #Allocate predicted data 
         for i in np.arange(len(roi_index)):
@@ -422,6 +458,15 @@ class ep_prediction:
 
         print(rf'{len(y_cell)}, {len(res_cell)}')
         rsqr_cell=np.round(r2_score(y_cell, res_cell), decimals=4)
+        mae_cell=mean_absolute_error(y_cell, res_cell)'''
+
+        error_map=np.subtract(full_img_cell,y_mat)
+        error_map_r=(abs(np.subtract(y_mat, full_img_cell))/y_mat)*100
+
+        ssim_idx = np.round(ssim(y_mat, full_img_cell, data_range=full_img_cell.max() - full_img_cell.min()), decimals=4)
+        print(ssim)
+
+        rsqr_cell=np.round(r2_score(y_cell, res_cell), decimals=4)
         mae_cell=mean_absolute_error(y_cell, res_cell)
 
         self.prediction_reconstructed=full_img_roi
@@ -429,6 +474,7 @@ class ep_prediction:
         self.relative_error_map=error_map_r
         self.rsqr=rsqr_cell
         self.mae=mae_cell
+        self.ssim=ssim_idx
         self.prediction_masked_vector=full_cell
         self.res_cell=res_cell
     def display_results(self, min_v=1, max_v=8):
