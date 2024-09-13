@@ -334,13 +334,14 @@ class preprocessing:
         tabs=sim_tables(self.fc, self.conv, sim_tables_folder)
         tabs.normalize()
         self.tabs=tabs
+        train_input_index=np.concatenate((self.mask_indexes,self.tabs.tab_indexes))
+        self.train_input_index=train_input_index
     def add_tables(self):
         self.x_final=pd.DataFrame(np.concatenate((self.fc.x_masked_norm, self.tabs.x_tab_norm), axis=0), columns=self.fc.x.columns)
         self.conv_final=np.concatenate((self.conv.x_cutouts_masked, self.tabs.x_cutouts_tab), axis=0)
         self.y_final=pd.DataFrame(np.concatenate((self.fc.y_masked, self.tabs.y_tab), axis=0))
 
-        train_input_index=np.concatenate((self.mask_indexes,self.tabs.tab_indexes))
-        self.train_input_index=train_input_index
+        
 class ep_prediction:
     def __init__(self, preproc_data, pctg, augment=1):
         fc, conv, y = preproc_data.x_final,preproc_data.conv_final,preproc_data.y_final
@@ -398,7 +399,7 @@ class ep_prediction:
     def predict(self, x, conv):
         res=self.trained_model.predict([x , conv])
         self.prediction=res
-    def reconstruct(self):
+    def reconstruct(self,add_train_data=1):
         nu_dim=self.nu_dim
         roi_index=self.mask_from_topo_indexes
         cell_index=self.mask_indexes
@@ -413,10 +414,10 @@ class ep_prediction:
         for i in np.arange(len(roi_index)):
             full_vec_roi[roi_index[i]]=res[i]
 
-
-        for i in y.index[np.array(train_input_index)[train_index]]:
-            if i in cell_index and i in np.array(train_input_index)[train_index] :
-                full_vec_roi[i]=y.iloc[i]
+        if add_train_data:
+            for i in y.index[np.array(train_input_index)[train_index]]:
+                if i in cell_index and i in np.array(train_input_index)[train_index] :
+                    full_vec_roi[i]=y.iloc[i]
 
         full_img_roi=np.reshape(full_vec_roi,(nu_dim,nu_dim))
         full_vec_roi=pd.DataFrame(full_vec_roi)
@@ -530,7 +531,7 @@ class ep_prediction:
 
         ax=fig3.add_subplot(1,2,1)
         binss=(np.arange(4*max_v)*0.25)+0.25+min_v
-        xaxis=(np.arange(9))
+        xaxis=(np.arange(max_v+1))
         ax.hist(y_cell, histtype="step", color="#000",bins=binss)
         ax.hist(full_cell, histtype="bar", color="#92def7",bins=binss)
         ax.set_xticks(xaxis)
