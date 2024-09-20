@@ -24,6 +24,20 @@ from skimage.metrics import structural_similarity as ssim
 
 class fc_input:
     def __init__(self, topography_file, curves_file, ref_file, cutout_size):
+        '''
+        This object calculates the input for the fully connected portion of the neural network. 
+        It is typically used within the preprocessing() class, and not as a standalone.
+        
+        Args:
+            * topography_file (string): Address for the topohraphy file in an XYZ ASCII file format.
+            * curves_file (string): Address for the file of preprocessed curves. This is typically a .npy file.
+                Note: It is also possible to use a folder containing lift images at different heights.
+                For this, they must be XYZ ASCII images and their file name must contain the height (in nm), e.g. Lift_20_.txt, Lift_120_.txt, etc.
+            * ref_file (string): Address for an image file in an XYZ ASCII file format that has a portion of the simulated εp data for the image we ewant to predict.
+            * cutout_size (int): Dimension of the topography cutouts that will be introduced into the convolutional part of the neural network. It must be an odd number.
+
+
+        '''
         self.topography_path = topography_file
         self.curves_path = curves_file
         self.y_path = ref_file
@@ -37,6 +51,16 @@ class fc_input:
         self.cutout_size=cutout_size
 
     def get_dcdz(self, maxlen, curve_height_setpoint, curve_nsamples, curves_max_limit, use_lifts):
+        '''
+        This function takes either the curves or the lift images and projects them into a vector that is then sampled logarithmically. 
+
+        Args:
+            * maxlen (int): Extension of the logarithmic sampling vector. This value is the maximum height [nm] for sampling and it is used to control the spacing between samples, however it is not included in the final sampling height values. 
+            * curve_height_setpoint (int): Height [nm] at which the sampling will begin
+            * curve_nsamp,es (int): Number of heights at which to sample curves
+            * curves_max_limit (int): Maxmimum height [nm] at which to project the curves. It should be a value close to the maximum height sampled in your image.
+            * use_lifts (int): Set value at 0 to use a curves file, at 1 to use a folder with lift iamges
+        '''
         zs=np.round((np.logspace(start=0,stop=math.log10(maxlen),num=curve_nsamples,endpoint=False)+curve_height_setpoint)).astype(int)
         samples = []
         [samples.append(x) for x in zs if x not in samples]
@@ -87,6 +111,9 @@ class fc_input:
 
 
     def get_vectors(self):
+        '''
+        
+        '''
         self.t_mat=matrix_cut(self.t_mat, self.nu_dim)
         self.y_mat=matrix_cut(self.y_mat,self.nu_dim)
         
