@@ -343,6 +343,8 @@ class preprocessing:
             self.fc=fc
             self.x_final=self.fc.x_masked_norm
             self.y_final=self.fc.y_masked
+            train_input_index=(self.mask_indexes)
+            self.train_input_index=train_input_index
         else:
             print("Error: Mask not found. Use get_mask() to obtain")
     def get_conv(self, direct_mask=0):
