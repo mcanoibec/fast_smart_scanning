@@ -17,7 +17,11 @@ def conv_imgs(matrix,kernel_size, idx=[]):
                 samps=np.concatenate((samps,samp), axis=0)
         samps=samps[1:,:,:]
     else:
-        half_kernel=int((kernel_size-1)/2)
+        if kernel_size%2 == 0:
+            extra=0
+        else:
+            extra=1
+        half_kernel=int(np.round((kernel_size-1)/2))
 
         ix=0
         iy=0
@@ -26,7 +30,7 @@ def conv_imgs(matrix,kernel_size, idx=[]):
         for j in tqdm(np.arange(len(idx[0,:]))):
             iy=idx[0,j]
             ix=idx[1,j]
-            samp=matrix[iy-half_kernel:iy+half_kernel+1,ix-half_kernel:ix+half_kernel+1]
+            samp=matrix[iy-half_kernel:iy+half_kernel+extra,ix-half_kernel:ix+half_kernel+extra]
             samp=np.expand_dims(samp, axis=0)
             samps=np.concatenate((samps,samp), axis=0)
         samps=samps[1:,:,:]
